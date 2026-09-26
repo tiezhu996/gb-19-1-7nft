@@ -17,6 +17,7 @@ func GetSchedules(c *gin.Context) {
 	teacherID := c.Query("teacher_id")
 	classroomID := c.Query("classroom_id")
 	status := c.Query("status")
+	courseID := c.Query("course_id")
 
 	offset := (page - 1) * pageSize
 
@@ -32,6 +33,10 @@ func GetSchedules(c *gin.Context) {
 
 	if classroomID != "" {
 		query = query.Where("classroom_id = ?", classroomID)
+	}
+
+	if courseID != "" {
+		query = query.Where("course_id = ?", courseID)
 	}
 
 	if status != "" {

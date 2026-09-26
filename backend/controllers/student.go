@@ -50,7 +50,13 @@ func GetStudent(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	var student models.Student
-	if err := database.DB.Preload("Payments.Course").Preload("Courses").First(&student, id).Error; err != nil {
+	if err := database.DB.
+		Preload("Payments.Course").
+		Preload("Courses.Course").
+		Preload("LeaveApplications.Course").
+		Preload("LeaveApplications.Schedule").
+		Preload("LeaveApplications.MakeupSchedule").
+		First(&student, id).Error; err != nil {
 		utils.NotFound(c, "学员不存在")
 		return
 	}

@@ -38,6 +38,16 @@ func TakeAttendance(c *gin.Context) {
 	tx := database.DB.Begin()
 
 	for _, att := range req.Attendances {
+		// 已有点名记录（含审批同意时自动生成的"请假"记录）的学员跳过，
+		// 保证原请假那节课不重复记、不重复扣
+		var existCount int64
+		tx.Model(&models.Attendance{}).
+			Where("schedule_id = ? AND student_id = ?", scheduleID, att.StudentID).
+			Count(&existCount)
+		if existCount > 0 {
+			continue
+		}
+
 		attendance := models.Attendance{
 			ScheduleID:    uint(scheduleID),
 			StudentID:     att.StudentID,
@@ -52,6 +62,23 @@ func TakeAttendance(c *gin.Context) {
 			attendance.CheckinTime = &now
 		}
 
+		// 这节课是否为某张已同意请假单安排的补课：
+		// 补课点名正常扣一次课时，并把请假单回写为"已补课"
+		var makeupLeave models.LeaveApplication
+		makeupErr := tx.
+			Where("student_id = ? AND makeup_schedule_id = ? AND status = ?",
+				att.StudentID, scheduleID, "approved").
+			First(&makeupLeave).Error
+		isMakeup := makeupErr == nil
+
+		if isMakeup {
+			attendance.IsMakeup = true
+			attendance.LeaveApplicationID = &makeupLeave.ID
+			if attendance.Remarks == "" {
+				attendance.Remarks = "补课点名，正常扣一次课时（原请假节不重复扣）"
+			}
+		}
+
 		if err := tx.Create(&attendance).Error; err != nil {
 			tx.Rollback()
 			utils.InternalServerError(c, "考勤记录失败")
@@ -64,6 +91,16 @@ func TakeAttendance(c *gin.Context) {
 				UpdateColumn("used_hours", gorm.Expr("used_hours + ?", att.HoursConsumed)).Error; err != nil {
 				tx.Rollback()
 				utils.InternalServerError(c, "更新课时消耗失败")
+				return
+			}
+		}
+
+		if isMakeup {
+			if err := tx.Model(&models.LeaveApplication{}).
+				Where("id = ?", makeupLeave.ID).
+				Update("makeup_status", "completed").Error; err != nil {
+				tx.Rollback()
+				utils.InternalServerError(c, "更新补课状态失败")
 				return
 			}
 		}

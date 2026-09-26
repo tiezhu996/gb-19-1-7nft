@@ -64,6 +64,58 @@ export interface Student {
   remarks?: string
 }
 
+export interface StudentCourse {
+  id?: number
+  student_id: number
+  course_id: number
+  total_hours: number
+  used_hours: number
+  remaining_hours?: number
+  start_date?: string
+  end_date?: string
+  status: number
+  course?: Course
+}
+
+export interface LeaveApplication {
+  id?: number
+  student_id: number
+  course_id: number
+  schedule_id: number
+  reason: string
+  status: 'pending' | 'approved' | 'rejected' | 'withdrawn'
+  applicant_id?: number
+  approver_id?: number
+  approve_remarks?: string
+  makeup_schedule_id?: number | null
+  makeup_status: 'none' | 'scheduled' | 'completed'
+  created_at?: string
+  student?: Student
+  course?: Course
+  schedule?: Schedule
+  makeup_schedule?: Schedule
+  applicant?: { id: number; name: string }
+}
+
+export const leaveApi = {
+  list: (params?: any) => get('/leave-applications', params),
+  create: (data: {
+    student_id: number
+    course_id: number
+    schedule_id: number
+    reason: string
+  }) => post('/leave-applications', data),
+  withdraw: (id: number) => post(`/leave-applications/${id}/withdraw`),
+  approve: (id: number, data?: { remarks?: string }) =>
+    post(`/leave-applications/${id}/approve`, data || {}),
+  reject: (id: number, data?: { remarks?: string }) =>
+    post(`/leave-applications/${id}/reject`, data || {}),
+  arrangeMakeup: (id: number, makeup_schedule_id: number) =>
+    post(`/leave-applications/${id}/makeup`, { makeup_schedule_id }),
+  studentAttendance: (studentId: number) =>
+    get('/student-attendance', { student_id: studentId }),
+}
+
 export const studentApi = {
   list: (params?: any) => get('/students', params),
   get: (id: number) => get(`/students/${id}`),

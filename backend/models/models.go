@@ -61,6 +61,7 @@ type Student struct {
 	LeadID      *uint     `json:"lead_id" gorm:"index"`
 	Payments    []Payment `json:"payments,omitempty" gorm:"foreignKey:StudentID"`
 	Courses     []StudentCourse `json:"courses,omitempty" gorm:"foreignKey:StudentID"`
+	LeaveApplications []LeaveApplication `json:"leave_applications,omitempty" gorm:"foreignKey:StudentID"`
 }
 
 type StudentCourse struct {
@@ -73,6 +74,7 @@ type StudentCourse struct {
 	StartDate    *time.Time `json:"start_date"`
 	EndDate      *time.Time `json:"end_date"`
 	Status       int       `json:"status" gorm:"default:1"`
+	Course       *Course   `json:"course,omitempty" gorm:"foreignKey:CourseID"`
 }
 
 type Course struct {
@@ -131,6 +133,33 @@ type Attendance struct {
 	Remarks       string `json:"remarks" gorm:"type:text"`
 	CheckinTime   *time.Time `json:"checkin_time"`
 	Student       *Student `json:"student,omitempty" gorm:"foreignKey:StudentID"`
+	// 该考勤记录关联的请假申请（请假记录、补课记录都会回填）
+	LeaveApplicationID *uint `json:"leave_application_id,omitempty" gorm:"index"`
+	// 是否为补课考勤（补课点名时为 true，补课正常扣课时；原请假节不重复扣）
+	IsMakeup bool `json:"is_makeup" gorm:"default:false"`
+	Schedule *Schedule `json:"schedule,omitempty" gorm:"foreignKey:ScheduleID"`
+}
+
+// 请假申请状态：pending 待审批 / approved 已同意 / rejected 已驳回 / withdrawn 已撤回
+// 补课状态：none 未安排 / scheduled 已安排待上课 / completed 已补课
+type LeaveApplication struct {
+	BaseModel
+	StudentID       uint   `json:"student_id" gorm:"index;not null"`
+	CourseID        uint   `json:"course_id" gorm:"index;not null"`
+	ScheduleID      uint   `json:"schedule_id" gorm:"index;not null"`
+	Reason          string `json:"reason" gorm:"type:text;not null"`
+	Status          string `json:"status" gorm:"size:20;default:pending;index"`
+	ApplicantID     uint   `json:"applicant_id" gorm:"index;not null"`
+	ApproverID      *uint  `json:"approver_id" gorm:"index"`
+	ApproveRemarks  string `json:"approve_remarks" gorm:"type:text"`
+	MakeupScheduleID *uint `json:"makeup_schedule_id" gorm:"index"`
+	MakeupStatus    string `json:"makeup_status" gorm:"size:20;default:none"`
+	Student  *Student  `json:"student,omitempty" gorm:"foreignKey:StudentID"`
+	Course   *Course   `json:"course,omitempty" gorm:"foreignKey:CourseID"`
+	Schedule *Schedule `json:"schedule,omitempty" gorm:"foreignKey:ScheduleID"`
+	MakeupSchedule *Schedule `json:"makeup_schedule,omitempty" gorm:"foreignKey:MakeupScheduleID"`
+	Applicant *User    `json:"applicant,omitempty" gorm:"foreignKey:ApplicantID"`
+	Approver  *User    `json:"approver,omitempty" gorm:"foreignKey:ApproverID"`
 }
 
 type Payment struct {
