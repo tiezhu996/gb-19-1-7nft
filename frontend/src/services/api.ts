@@ -138,6 +138,9 @@ export interface Schedule {
   duration: number
   status?: string
   remarks?: string
+  course?: Course
+  teacher?: Teacher
+  classroom?: Classroom
 }
 
 export const scheduleApi = {
@@ -183,4 +186,43 @@ export const refundApi = {
 export const dashboardApi = {
   stats: () => get('/dashboard/stats'),
   charts: () => get('/dashboard/charts'),
+}
+
+export interface LeaveRequest {
+  id?: number
+  student_id: number
+  course_id?: number
+  schedule_id: number
+  reason: string
+  status?: 'pending' | 'approved' | 'rejected' | 'withdrawn'
+  reject_reason?: string
+  makeup_schedule_id?: number | null
+  student?: Student
+  course?: Course
+  schedule?: Schedule
+  makeup_schedule?: Schedule
+  submitter?: { id: number; name: string }
+  approver?: { id: number; name: string }
+  created_at?: string
+  approved_at?: string
+  makeup_assigned_at?: string
+}
+
+export const leaveApi = {
+  options: (studentId: number, excludeScheduleId?: number, forMakeup = false) =>
+    get('/leave-requests/options', {
+      student_id: studentId,
+      exclude_schedule_id: excludeScheduleId,
+      for_makeup: forMakeup ? 1 : undefined,
+    }),
+  list: (params?: any) => get('/leave-requests', params),
+  create: (data: { student_id: number; schedule_id: number; reason: string }) =>
+    post('/leave-requests', data),
+  withdraw: (id: number) => post(`/leave-requests/${id}/withdraw`),
+  approve: (id: number, makeupScheduleId: number) =>
+    post(`/leave-requests/${id}/approve`, { makeup_schedule_id: makeupScheduleId }),
+  reject: (id: number, reason?: string) =>
+    post(`/leave-requests/${id}/reject`, { reason }),
+  assignMakeup: (id: number, makeupScheduleId: number) =>
+    post(`/leave-requests/${id}/makeup`, { makeup_schedule_id: makeupScheduleId }),
 }

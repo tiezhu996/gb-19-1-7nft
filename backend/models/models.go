@@ -61,6 +61,7 @@ type Student struct {
 	LeadID      *uint     `json:"lead_id" gorm:"index"`
 	Payments    []Payment `json:"payments,omitempty" gorm:"foreignKey:StudentID"`
 	Courses     []StudentCourse `json:"courses,omitempty" gorm:"foreignKey:StudentID"`
+	LeaveRequests []LeaveRequest `json:"leave_requests,omitempty" gorm:"foreignKey:StudentID"`
 }
 
 type StudentCourse struct {
@@ -73,6 +74,7 @@ type StudentCourse struct {
 	StartDate    *time.Time `json:"start_date"`
 	EndDate      *time.Time `json:"end_date"`
 	Status       int       `json:"status" gorm:"default:1"`
+	Course       *Course   `json:"course,omitempty" gorm:"foreignKey:CourseID"`
 }
 
 type Course struct {
@@ -124,13 +126,38 @@ type Schedule struct {
 
 type Attendance struct {
 	BaseModel
-	ScheduleID    uint   `json:"schedule_id" gorm:"index;not null"`
-	StudentID     uint   `json:"student_id" gorm:"index;not null"`
-	Status        string `json:"status" gorm:"size:20;not null"`
-	HoursConsumed int    `json:"hours_consumed" gorm:"default:0"`
-	Remarks       string `json:"remarks" gorm:"type:text"`
-	CheckinTime   *time.Time `json:"checkin_time"`
-	Student       *Student `json:"student,omitempty" gorm:"foreignKey:StudentID"`
+	ScheduleID     uint   `json:"schedule_id" gorm:"index;not null"`
+	StudentID      uint   `json:"student_id" gorm:"index;not null"`
+	Status         string `json:"status" gorm:"size:20;not null"`
+	HoursConsumed  int    `json:"hours_consumed" gorm:"default:0"`
+	Remarks        string `json:"remarks" gorm:"type:text"`
+	CheckinTime    *time.Time `json:"checkin_time"`
+	LeaveRequestID *uint  `json:"leave_request_id" gorm:"index"`
+	IsMakeup       bool   `json:"is_makeup" gorm:"default:false"`
+	Student        *Student `json:"student,omitempty" gorm:"foreignKey:StudentID"`
+	LeaveRequest   *LeaveRequest `json:"leave_request,omitempty" gorm:"foreignKey:LeaveRequestID"`
+}
+
+type LeaveRequest struct {
+	BaseModel
+	StudentID          uint      `json:"student_id" gorm:"index;not null"`
+	CourseID           uint      `json:"course_id" gorm:"index;not null"`
+	ScheduleID         uint      `json:"schedule_id" gorm:"index;not null"`
+	Reason             string    `json:"reason" gorm:"type:text;not null"`
+	Status             string    `json:"status" gorm:"size:20;default:pending;index"`
+	SubmittedBy        uint      `json:"submitted_by" gorm:"index;not null"`
+	Submitter          *User     `json:"submitter,omitempty" gorm:"foreignKey:SubmittedBy"`
+	ApprovedBy         *uint     `json:"approved_by" gorm:"index"`
+	Approver           *User     `json:"approver,omitempty" gorm:"foreignKey:ApprovedBy"`
+	ApprovedAt         *time.Time `json:"approved_at"`
+	RejectReason       string    `json:"reject_reason" gorm:"type:text"`
+	MakeupScheduleID   *uint     `json:"makeup_schedule_id" gorm:"index"`
+	MakeupAssignedBy   *uint     `json:"makeup_assigned_by" gorm:"index"`
+	MakeupAssignedAt   *time.Time `json:"makeup_assigned_at"`
+	Student            *Student  `json:"student,omitempty" gorm:"foreignKey:StudentID"`
+	Course             *Course   `json:"course,omitempty" gorm:"foreignKey:CourseID"`
+	Schedule           *Schedule `json:"schedule,omitempty" gorm:"foreignKey:ScheduleID"`
+	MakeupSchedule     *Schedule `json:"makeup_schedule,omitempty" gorm:"foreignKey:MakeupScheduleID"`
 }
 
 type Payment struct {

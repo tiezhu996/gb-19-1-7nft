@@ -93,6 +93,17 @@ func main() {
 		students.DELETE("/:id/tags", controllers.RemoveStudentTag)
 	}
 
+	leaveRequests := api.Group("/leave-requests")
+	{
+		leaveRequests.GET("/options", controllers.GetLeaveOptions)
+		leaveRequests.GET("", controllers.GetLeaveRequests)
+		leaveRequests.POST("", controllers.CreateLeaveRequest)
+		leaveRequests.POST("/:id/withdraw", controllers.WithdrawLeaveRequest)
+		leaveRequests.POST("/:id/approve", controllers.ApproveLeaveRequest)
+		leaveRequests.POST("/:id/reject", controllers.RejectLeaveRequest)
+		leaveRequests.POST("/:id/makeup", controllers.AssignMakeup)
+	}
+
 	courses := api.Group("/courses")
 	{
 		courses.GET("", controllers.GetCourses)

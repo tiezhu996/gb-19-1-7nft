@@ -59,7 +59,14 @@ func GetSchedule(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	var schedule models.Schedule
-	if err := database.DB.Preload("Course").Preload("Teacher").Preload("Classroom").Preload("Attendances.Student").First(&schedule, id).Error; err != nil {
+	if err := database.DB.
+		Preload("Course").
+		Preload("Teacher").
+		Preload("Classroom").
+		Preload("Attendances.Student").
+		Preload("Attendances.LeaveRequest.Schedule").
+		Preload("Attendances.LeaveRequest.MakeupSchedule").
+		First(&schedule, id).Error; err != nil {
 		utils.NotFound(c, "排课不存在")
 		return
 	}

@@ -38,6 +38,13 @@ func TakeAttendance(c *gin.Context) {
 	tx := database.DB.Begin()
 
 	for _, att := range req.Attendances {
+		// 已有考勤记录的（如请假同意/驳回时预生成的记录）不重复点名、不重复扣课时
+		var existing models.Attendance
+		if err := tx.Where("schedule_id = ? AND student_id = ?", scheduleID, att.StudentID).
+			First(&existing).Error; err == nil {
+			continue
+		}
+
 		attendance := models.Attendance{
 			ScheduleID:    uint(scheduleID),
 			StudentID:     att.StudentID,
@@ -50,6 +57,17 @@ func TakeAttendance(c *gin.Context) {
 		if att.Status == "present" {
 			now := time.Now()
 			attendance.CheckinTime = &now
+		}
+
+		// 如果该学员在这节排课上有已批准且指向本节的补课申请，关联起来并标记为补课
+		var makeupLR models.LeaveRequest
+		if err := database.DB.Where("student_id = ? AND makeup_schedule_id = ? AND status = ?", att.StudentID, scheduleID, "approved").
+			First(&makeupLR).Error; err == nil {
+			attendance.LeaveRequestID = &makeupLR.ID
+			attendance.IsMakeup = true
+			if attendance.Remarks == "" {
+				attendance.Remarks = "补课"
+			}
 		}
 
 		if err := tx.Create(&attendance).Error; err != nil {
@@ -92,7 +110,10 @@ func GetStudentSchedule(c *gin.Context) {
 	query := database.DB.Model(&models.Schedule{}).
 		Joins("JOIN attendances ON attendances.schedule_id = schedules.id").
 		Where("attendances.student_id = ?", studentID).
-		Preload("Course").Preload("Teacher").Preload("Classroom")
+		Preload("Course").Preload("Teacher").Preload("Classroom").
+		Preload("Attendances", "student_id = ?", studentID).
+		Preload("Attendances.LeaveRequest.Schedule").
+		Preload("Attendances.LeaveRequest.MakeupSchedule")
 
 	if date != "" {
 		query = query.Where("schedules.date = ?", date)

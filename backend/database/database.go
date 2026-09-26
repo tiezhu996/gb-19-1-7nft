@@ -66,6 +66,7 @@ func migrate() error {
 		&models.Teacher{},
 		&models.Schedule{},
 		&models.Attendance{},
+		&models.LeaveRequest{},
 		&models.Payment{},
 		&models.Refund{},
 		&models.Performance{},
